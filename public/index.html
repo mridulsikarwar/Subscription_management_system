@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brightloop Software — Subscription Management System</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Global Header -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="brand">
+          <div class="logo-icon">🟣</div>
+          <div class="brand-text">
+            <span class="brand-name">Brightloop</span>
+            <span class="brand-sub">Subscription System</span>
+          </div>
+        </div>
+        <div class="app-switcher-badge">Odoo Edition</div>
+      </div>
+
+      <div class="nav-center">
+        <!-- Quick Global Search -->
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="global-search" placeholder="Search subscriptions, customers, invoices..." oninput="handleGlobalSearch(this.value)">
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <!-- Persona Quick Switcher for Demo / Testing -->
+        <div class="persona-selector-wrap">
+          <label class="persona-label">Demo Persona:</label>
+          <select id="persona-select" onchange="switchPersona(this.value)" class="persona-dropdown">
+            <option value="admin">Sarah (Admin - Full Access)</option>
+            <option value="staff">David (Internal Staff)</option>
+            <option value="customer-acme">Alex (Customer: Acme Corp)</option>
+            <option value="customer-nova">Elena (Customer: Nova Retail)</option>
+          </select>
+        </div>
+
+        <div class="user-profile">
+          <div class="avatar" id="current-user-avatar">SA</div>
+          <div class="user-meta">
+            <div class="user-name" id="current-user-name">Sarah Jenkins</div>
+            <div class="user-role-badge" id="current-user-role">Administrator</div>
+          </div>
+        </div>
+
+        <button class="btn btn-outline btn-sm" onclick="showAuthModal()">Auth / Switch</button>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Left Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav class="sidebar-menu">
+          <div class="menu-section-title">MAIN</div>
+          <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+            <span class="nav-icon">📊</span> Finance Dashboard
+          </button>
+          <button class="nav-item" data-tab="subscriptions" onclick="switchTab('subscriptions')">
+            <span class="nav-icon">🔁</span> Subscriptions
+          </button>
+          <button class="nav-item" data-tab="invoices" onclick="switchTab('invoices')">
+            <span class="nav-icon">🧾</span> Invoices & Billing
+          </button>
+          <button class="nav-item" data-tab="payments" onclick="switchTab('payments')">
+            <span class="nav-icon">💳</span> Payments
+          </button>
+
+          <div class="menu-section-title admin-only">MANAGEMENT</div>
+          <button class="nav-item admin-staff-only" data-tab="templates" onclick="switchTab('templates')">
+            <span class="nav-icon">📋</span> Quote Templates
+          </button>
+          <button class="nav-item admin-only" data-tab="products" onclick="switchTab('products')">
+            <span class="nav-icon">📦</span> Products & Variants
+          </button>
+          <button class="nav-item admin-only" data-tab="plans" onclick="switchTab('plans')">
+            <span class="nav-icon">⏱️</span> Recurring Plans
+          </button>
+          <button class="nav-item admin-only" data-tab="discounts" onclick="switchTab('discounts')">
+            <span class="nav-icon">🏷️</span> Discount Rules
+          </button>
+          <button class="nav-item admin-only" data-tab="staff" onclick="switchTab('staff')">
+            <span class="nav-icon">👥</span> Staff Members
+          </button>
+          
+          <div class="customer-portal-note" id="portal-banner" style="display: none;">
+            <span>🔒 <b>Customer Portal View:</b> Showing only your company's contracts and billing history.</span>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="system-health">
+            <span class="pulse-dot"></span> System Operational (<2s latency)
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Container -->
+      <main class="content-viewport">
+
+        <!-- ======================= 1. DASHBOARD TAB ======================= -->
+        <section id="tab-dashboard" class="tab-content active">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Executive Finance Lead Dashboard</h1>
+              <p class="page-subtitle">Real-time subscription metrics, cashflow, and overdue receivables.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-secondary" onclick="exportFinanceSummary()">📥 Export Summary</button>
+              <button class="btn btn-primary" onclick="triggerBillingDayModal()">⚡ Run Billing Day Batch</button>
+            </div>
+          </div>
+
+          <!-- KPI Summary Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-title">Active Subscriptions</div>
+              <div class="kpi-value" id="kpi-active-subs">-</div>
+              <div class="kpi-sub" id="kpi-total-subs">- total tracked</div>
+            </div>
+            <div class="kpi-card highlight-purple">
+              <div class="kpi-title">Monthly Recurring (MRR)</div>
+              <div class="kpi-value" id="kpi-mrr">$0.00</div>
+              <div class="kpi-sub" id="kpi-arr">ARR: $0.00</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Total Revenue Billed</div>
+              <div class="kpi-value" id="kpi-billed">$0.00</div>
+              <div class="kpi-sub">Lifetime invoices generated</div>
+            </div>
+            <div class="kpi-card highlight-green">
+              <div class="kpi-title">Cash Payments Collected</div>
+              <div class="kpi-value" id="kpi-collected">$0.00</div>
+              <div class="kpi-sub" id="kpi-collection-rate">100% collected</div>
+            </div>
+            <div class="kpi-card highlight-red">
+              <div class="kpi-title">Overdue Receivables</div>
+              <div class="kpi-value" id="kpi-overdue-amount">$0.00</div>
+              <div class="kpi-sub" id="kpi-overdue-count">0 overdue invoices</div>
+            </div>
+          </div>
+
+          <!-- Dashboard Charts & Feeds -->
+          <div class="dashboard-grid">
+            <div class="card">
+              <div class="card-header">
+                <h3>Subscription Breakdown by Plan</h3>
+              </div>
+              <div class="card-body">
+                <div id="plan-breakdown-list" class="bars-container">
+                  <!-- Generated bars -->
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>Invoice Status Pipeline</h3>
+              </div>
+              <div class="card-body">
+                <div id="status-breakdown-list" class="pipeline-container">
+                  <!-- Generated breakdown -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity Tables -->
+          <div class="dashboard-grid">
+            <div class="card">
+              <div class="card-header flex-between">
+                <h3>Recent Invoices</h3>
+                <button class="btn btn-link" onclick="switchTab('invoices')">View All</button>
+              </div>
+              <div class="card-body p-0">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice #</th>
+                      <th>Customer</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-recent-invoices">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header flex-between">
+                <h3>Latest Payments Received</h3>
+                <button class="btn btn-link" onclick="switchTab('payments')">View All</button>
+              </div>
+              <div class="card-body p-0">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Ref #</th>
+                      <th>Customer</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-recent-payments">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================= 2. SUBSCRIPTIONS TAB ======================= -->
+        <section id="tab-subscriptions" class="tab-content">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Subscriptions & Quotations</h1>
+              <p class="page-subtitle">Track contracts from Draft to Quotation, Confirmed, Active, and Closed.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-secondary" onclick="loadSubscriptions()">🔄 Refresh</button>
+              <button class="btn btn-primary admin-staff-only" onclick="openNewSubscriptionModal()">➕ New Subscription / Quote</button>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <label>Status:</label>
+              <select id="sub-filter-status" onchange="loadSubscriptions()">
+                <option value="">All Statuses</option>
+                <option value="Draft">Draft</option>
+                <option value="Quotation">Quotation</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Active">Active</option>
+                <option value="Paused">Paused</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <input type="text" id="sub-filter-text" placeholder="Filter by customer, ID..." oninput="filterSubscriptionsTable(this.value)">
+            </div>
+          </div>
+
+          <div class="card p-0">
+            <table class="data-table" id="subscriptions-table">
+              <thead>
+                <tr>
+                  <th>Sub Number</th>
+                  <th>Customer</th>
+                  <th>Plan & Frequency</th>
+                  <th>Start Date</th>
+                  <th>Next Billing</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="subscriptions-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================= 3. INVOICES TAB ======================= -->
+        <section id="tab-invoices" class="tab-content">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Invoices & Billing</h1>
+              <p class="page-subtitle">Automatic recurring invoices, tax calculations, and status progression.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-outline" onclick="loadInvoices()">🔄 Refresh</button>
+              <button class="btn btn-primary admin-staff-only" onclick="triggerBillingDayModal()">⚡ Run Billing Day Batch</button>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <label>Status:</label>
+              <select id="inv-filter-status" onchange="loadInvoices()">
+                <option value="">All Statuses</option>
+                <option value="Draft">Draft</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Paid">Paid</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label><input type="checkbox" id="inv-filter-overdue" onchange="loadInvoices()"> Only Overdue Invoices</label>
+            </div>
+            <div class="filter-group">
+              <input type="text" id="inv-filter-text" placeholder="Search invoices..." oninput="filterInvoicesTable(this.value)">
+            </div>
+          </div>
+
+          <div class="card p-0">
+            <table class="data-table" id="invoices-table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Subscription</th>
+                  <th>Customer</th>
+                  <th>Invoice Date</th>
+                  <th>Due Date</th>
+                  <th>Total</th>
+                  <th>Balance Due</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="invoices-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================= 4. PAYMENTS TAB ======================= -->
+        <section id="tab-payments" class="tab-content">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Payments Journal</h1>
+              <p class="page-subtitle">Record and reconcile customer payments against invoices.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-outline" onclick="loadPayments()">🔄 Refresh</button>
+              <button class="btn btn-primary" onclick="openPaymentModal()">➕ Record Payment</button>
+            </div>
+          </div>
+
+          <div class="card p-0">
+            <table class="data-table" id="payments-table">
+              <thead>
+                <tr>
+                  <th>Payment #</th>
+                  <th>Invoice #</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th>Method</th>
+                  <th>Amount</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="payments-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================= 5. QUOTATION TEMPLATES ======================= -->
+        <section id="tab-templates" class="tab-content admin-staff-only">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Quotation Templates</h1>
+              <p class="page-subtitle">Pre-set plan and product bundles to speed up sales offers.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="openNewTemplateModal()">➕ Create Template</button>
+            </div>
+          </div>
+
+          <div class="grid-cards" id="templates-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </section>
+
+        <!-- ======================= 6. PRODUCTS & VARIANTS ======================= -->
+        <section id="tab-products" class="tab-content admin-only">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Products & Variants</h1>
+              <p class="page-subtitle">Manage catalog items, pricing, and variant surcharges (e.g., Odoo Brand +$560).</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="openNewProductModal()">➕ Add Product</button>
+            </div>
+          </div>
+
+          <div class="card p-0">
+            <table class="data-table" id="products-table">
+              <thead>
+                <tr>
+                  <th>Product Name</th>
+                  <th>Type</th>
+                  <th>Sales Price</th>
+                  <th>Cost Price</th>
+                  <th>Variants & Surcharges</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="products-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================= 7. PLANS TAB ======================= -->
+        <section id="tab-plans" class="tab-content admin-only">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Recurring Plans</h1>
+              <p class="page-subtitle">Configure billing intervals (daily, weekly, monthly, yearly), min seats, and closure rules.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="openNewPlanModal()">➕ Add Plan</button>
+            </div>
+          </div>
+
+          <div class="grid-cards" id="plans-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- ======================= 8. DISCOUNTS TAB ======================= -->
+        <section id="tab-discounts" class="tab-content admin-only">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Discount Rules</h1>
+              <p class="page-subtitle">Admin-controlled discount engines: fixed or percentage, min seats, auto-applied to invoices.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="openNewDiscountModal()">➕ Add Discount Rule</button>
+            </div>
+          </div>
+
+          <div class="card p-0">
+            <table class="data-table" id="discounts-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Type & Value</th>
+                  <th>Scope</th>
+                  <th>Min Purchase / Qty</th>
+                  <th>Valid Dates</th>
+                  <th>Usage (Used / Limit)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="discounts-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ======================= 9. STAFF MEMBERS TAB ======================= -->
+        <section id="tab-staff" class="tab-content admin-only">
+          <div class="view-header">
+            <div>
+              <h1 class="page-title">Internal Staff Management</h1>
+              <p class="page-subtitle">Only system administrators can add and manage internal staff accounts.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="openNewStaffModal()">➕ Add Staff Member</button>
+            </div>
+          </div>
+
+          <div class="card p-0">
+            <table class="data-table" id="staff-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Department / Company</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody id="staff-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ======================= MODALS ======================= -->
+
+    <!-- Generic Modal Wrapper -->
+    <div id="modal-backdrop" class="modal-backdrop" style="display: none;" onclick="closeModalOnBackdrop(event)">
+      <div class="modal-dialog" id="modal-container">
+        <!-- Content injected by JS -->
+      </div>
+    </div>
+
+    <!-- Printable Invoice View Container -->
+    <div id="printable-invoice" class="printable-area" style="display: none;">
+      <!-- Populated dynamically when user clicks Print / View Invoice -->
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div id="toast" class="toast-notification"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

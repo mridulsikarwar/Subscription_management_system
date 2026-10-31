@@ -1,0 +1,19 @@
+{
+  "name": "brightloop-subscription-management-system",
+  "version": "1.0.0",
+  "description": "Brightloop Software Unified Subscription Management & Recurring Billing System (Odoo Style)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "subscription-management",
+    "recurring-billing",
+    "odoo",
+    "invoicing",
+    "saas"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}
